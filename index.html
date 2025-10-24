@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>TTS → Audio · Light UI (Instructions · Speed · Preview · Cost)</title>
+<style>
+  :root{
+    --bg:#f6f8fc; --panel:#ffffff; --panel-2:#f9fbff; --text:#0f172a; --muted:#5b6b83;
+    --accent:#2563eb; --accent-2:#1d4ed8; --danger:#dc2626; --ok:#059669; --ring:#93c5fd;
+    --shadow: 0 8px 24px rgba(18, 44, 94, .08);
+    --radius: 16px; --radius-sm:12px;
+  }
+  *{ box-sizing: border-box; }
+  html, body{ height:100%; }
+  body{ margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color:var(--text); background:var(--bg); }
+  /* --- Header --- */
+  header{ position: sticky; top:0; z-index: 10; background:#ffffffd8; backdrop-filter: saturate(160%) blur(10px);
+          border-bottom: 1px solid #e7edf7; }
+  .topbar{ max-width: 1120px; margin:0 auto; display:flex; gap:12px; align-items:center; padding: 12px; }
+  .brand{ font-weight:800; letter-spacing:.2px; font-size:18px; white-space:nowrap; }
+  .spacer{ flex:1; }
+  .miniinfo{ font-size:12px; color:var(--muted); display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
+  .chip{ display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:#e6eefc; color:#0f172a; border:1px solid #d9e5ff; }
+  /* --- Layout --- */
+  main{ max-width:1120px; margin:18px auto 80px; padding: 0 12px; }
+  .grid{ display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
+  @media (max-width: 980px){ .grid{ grid-template-columns:1fr; } }
+  /* --- Card --- */
+  .card{ background:var(--panel); border: 1px solid #e8eef8; border-radius: var(--radius); box-shadow: var(--shadow); overflow: clip; }
+  .hd{ padding: 14px 16px; border-bottom: 1px solid #e8eef8; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .hd .title{ font-weight:800; letter-spacing:.2px; }
+  .hd .sub{ font-size:12px; color:var(--muted); }
+  .body{ padding: 14px 16px; display:grid; gap:14px; }
+  .section-title{ font-size:12px; color:var(--muted); text-transform: uppercase; letter-spacing:.08em; }
+  /* --- Inputs --- */
+  label{ font-size:12px; color:var(--muted); display:block; margin-bottom:8px; }
+  input, select, textarea{
+    width:100%; border:1px solid #d7e1f1; background: var(--panel-2);
+    color:var(--text); border-radius: var(--radius-sm); padding: 12px 14px; font:inherit; outline: none;
+  }
+  input:focus, select:focus, textarea:focus{ box-shadow: 0 0 0 3px var(--ring); border-color: transparent; background:#fff; }
+  textarea{ min-height:220px; line-height:1.55; resize: vertical; }
+  .row{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:14px; }
+  .row-3{ display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:14px; }
+  @media (max-width: 820px){ .row, .row-3{ grid-template-columns: 1fr; } }
+  /* --- Buttons --- */
+  .btns{ display:flex; flex-wrap: wrap; gap:10px; }
+  button{
+    border:0; padding: 12px 14px; border-radius: 12px; font-weight:700; cursor:pointer;
+    background:#ecf1fb; color:#0f172a; min-height:44px; transition: transform .04s ease, filter .12s ease, background .2s ease;
+  }
+  button:hover{ filter: brightness(1.03); }
+  button:active{ transform: translateY(1px); }
+  .primary{ background: linear-gradient(180deg, var(--accent), var(--accent-2)); color:#fff; }
+  .danger{ background: var(--danger); color:#fff; }
+  .ghost{ background: transparent; border:1px dashed #b7c6e9; color:#334155; }
+  .ok{ background: var(--ok); color:#fff; }
+  .icon{ margin-right:6px; opacity:.75; }
+  /* --- Audio & toolbar --- */
+  .audio-wrap{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding: 12px 16px; border-top:1px solid #e8eef8; }
+  audio{ width:100%; max-width:720px; }
+  /* --- Preview list --- */
+  .preview-list{ display:grid; grid-template-columns: repeat(auto-fit, minmax(230px,1fr)); gap:12px; }
+  .preview-card{ background: var(--panel-2); border:1px solid #e6eefb; border-radius: 14px; padding: 12px; display:grid; gap:10px; }
+  .preview-card header{ display:flex; align-items:center; justify-content:space-between; padding:0; background:none; border:0; }
+  .preview-card .tag{ font-size:12px; padding:6px 10px; border-radius:999px; background:#eaf1ff; color:#1e293b; border:1px solid #d7e5ff; }
+  .preview-card .sample{ font-size:13px; color:var(--muted); padding:10px; border:1px dashed #cbd7f0; border-radius:10px; background:#fff; }
+  /* --- Table --- */
+  table{ width:100%; border-collapse: collapse; font-size:13px; }
+  th, td{ padding:10px 12px; border-bottom:1px solid #e8eef8; text-align:left; }
+  th{ background:#f3f7ff; }
+  .right{ text-align:right; }
+  tfoot td{ font-weight:800; }
+  /* --- CTA --- */
+  .cta{ position: fixed; bottom: 10px; left: 12px; right: 12px; z-index: 9; display:none; gap:10px; }
+  @media (max-width: 720px){ .cta{ display:flex; } }
+  /* --- Overlay --- */
+  .overlay{ position: fixed; inset:0; background: #00000033; display:none; align-items:center; justify-content:center; z-index: 20; }
+  .overlay .box{ background: var(--panel); border:1px solid #e8eef8; border-radius: 16px; padding: 18px; min-width: 280px; box-shadow: var(--shadow); display:grid; gap:12px; }
+  .bar{ height: 10px; background:#e7edf7; border-radius:999px; overflow:hidden; }
+  .bar > i{ display:block; height:100%; width:0%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .2s ease; }
+  /* --- Toast --- */
+  .toast{ position: fixed; right: 12px; bottom: 12px; display:grid; gap:8px; z-index: 25; }
+  .toast .t{ background: var(--panel); border:1px solid #e8eef8; padding:10px 12px; border-radius: 12px; box-shadow: var(--shadow); font-size:13px; }
+  /* Helpers */
+  .number{ font-variant-numeric: tabular-nums; }
+  .hint{ font-size:12px; color:var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <div class="topbar">
+    <div class="brand">TTS · Light UI</div>
+    <div class="spacer"></div>
+    <div class="miniinfo">
+      <span class="chip">Est. Cost: <b class="number" id="estCost">0.0000</b> USD</span>
+      <span class="chip">Chars: <b class="number" id="liveChars">0</b></span>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="grid">
+    <!-- Left: Main flow -->
+    <section class="card">
+      <div class="hd">
+        <div>
+          <div class="title">Text → Speech</div>
+          <div class="sub">Paste long text; preview voices; export MP3/WAV/AAC/FLAC/OPUS/PCM.</div>
+        </div>
+        <div class="btns">
+          <button id="btnPreview" class="ghost"><span class="icon">▶︎</span>Preview Current</button>
+          <button id="btnPreviewAll" class="ghost"><span class="icon">⤢</span>Preview All</button>
+        </div>
+      </div>
+      <div class="body">
+        <div class="section-title">Setup</div>
+        <div class="row-3">
+          <div>
+            <label>OpenAI API Key</label>
+            <input id="apiKey" type="password" placeholder="sk-..." autocomplete="off"/>
+            <label class="hint" style="display:flex; gap:8px; margin-top:8px; align-items:center;">
+              <input id="rememberKey" type="checkbox"/> Save Key locally
+            </label>
+          </div>
+          <div>
+            <label>Model</label>
+            <select id="model">
+              <option value="gpt-4o-mini-tts">gpt-4o-mini-tts</option>
+              <option value="tts-1">tts-1</option>
+              <option value="tts-1-hd">tts-1-hd</option>
+            </select>
+            <label style="margin-top:12px;">Voice</label>
+            <select id="voice">
+              <option>Alloy</option><option>Ash</option><option>Ballad</option><option>Cedar</option><option>Coral</option>
+              <option>Echo</option><option>Fable</option><option>Marin</option><option>Nova</option><option>Onyx</option>
+              <option>Sage</option><option>Shimmer</option><option>Verse</option>
+            </select>
+          </div>
+          <div>
+            <label>Pricing (USD / 1k chars)</label>
+            <div class="row" style="grid-template-columns:repeat(3,1fr)">
+              <input id="price_g4om" type="number" step="0.001" value="0.015" title="gpt‑4o‑mini‑tts"/>
+              <input id="price_tts1" type="number" step="0.001" value="0.015" title="tts‑1"/>
+              <input id="price_tts1hd" type="number" step="0.001" value="0.030" title="tts‑1‑hd"/>
+            </div>
+            <label style="margin-top:12px;">Est. Speech Rate (chars/s)</label>
+            <input id="cps" type="number" step="1" value="12"/>
+          </div>
+        </div>
+
+        <div class="section-title">Style & Output</div>
+        <div class="row">
+          <div>
+            <label>Instructions (style/tone)</label>
+            <textarea id="instructions" placeholder="e.g., 用生气的语气；更自然放松；新闻主播风格；轻微港式口音；多一点停顿。"></textarea>
+          </div>
+          <div>
+            <label>Speed (0.25× – 4.0×)</label>
+            <input id="speed" type="range" min="0.25" max="4" step="0.05" value="1"/>
+            <div class="hint">Current: <b id="speedVal">1.00×</b></div>
+            <label style="margin-top:12px;">Response format</label>
+            <select id="respFmt">
+              <option value="mp3">MP3</option>
+              <option value="wav">WAV</option>
+              <option value="aac">AAC</option>
+              <option value="flac">FLAC</option>
+              <option value="opus">OPUS</option>
+              <option value="pcm">PCM</option>
+            </select>
+            <label style="margin-top:12px;">Sample text</label>
+            <input id="sample" type="text" value="你好，我是示例语音。这是一段预听样本。"/>
+          </div>
+        </div>
+
+        <div class="section-title">Article</div>
+        <div>
+          <textarea id="text" placeholder="Paste your article here, then click Convert…"></textarea>
+          <div class="hint">Auto-chunk around 3,500 chars per segment, then merge to one file.</div>
+        </div>
+      </div>
+      <div class="audio-wrap">
+        <audio id="player" controls></audio>
+        <a id="download" class="ghost" download="tts.mp3">Download</a>
+        <div class="spacer"></div>
+        <div class="btns">
+          <button id="btnRun" class="primary">Convert & Download</button>
+          <button id="btnStop" class="danger">Stop</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right: Previews & Cost -->
+    <section class="card">
+      <div class="hd">
+        <div>
+          <div class="title">Previews & Cost</div>
+          <div class="sub">Compare voices and track each call cost.</div>
+        </div>
+        <div class="btns">
+          <button id="btnExportCSV" class="ghost">Export CSV</button>
+          <button id="btnClearLog" class="ghost">Clear</button>
+        </div>
+      </div>
+      <div class="body">
+        <div id="previewList" class="preview-list"></div>
+        <div class="hint">Note: some accounts/regions may ignore instructions/speed/voice; please follow your official docs.</div>
+        <div style="margin-top:6px;">
+          <table id="costTable">
+            <thead>
+              <tr>
+                <th>Time</th><th>Type</th><th>Model</th><th>Voice</th>
+                <th class="right">Input chars</th><th class="right">Est. tokens</th>
+                <th class="right">Output bytes</th><th class="right">Est. secs</th>
+                <th class="right">Unit (USD/1k)</th><th class="right">Cost (USD)</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+            <tfoot>
+              <tr>
+                <td colspan="4" class="right">Total:</td>
+                <td id="sumChars" class="right number">0</td>
+                <td id="sumTokens" class="right number">0</td>
+                <td id="sumBytes" class="right number">0</td>
+                <td id="sumSecs" class="right number">0</td>
+                <td class="right">—</td>
+                <td id="sumCost" class="right number">0.0000</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<!-- Mobile CTA -->
+<div class="cta">
+  <button id="btnPreview_m" class="ghost" style="flex:1"><span class="icon">▶︎</span>Preview</button>
+  <button id="btnRun_m" class="primary" style="flex:2">Convert</button>
+</div>
+
+<!-- Overlay -->
+<div class="overlay" id="overlay">
+  <div class="box">
+    <div id="ovText">Processing…</div>
+    <div class="bar"><i id="ovBar" style="width:0%"></i></div>
+    <button id="ovCancel" class="danger">Stop</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  const $ = s=>document.querySelector(s);
+  const apiEndpoint = "https://api.openai.com/v1/audio/speech";
+
+  // Elements
+  const inpKey = $("#apiKey"), rememberKey=$("#rememberKey");
+  const selModel=$("#model"), selVoice=$("#voice");
+  const price_g4om=$("#price_g4om"), price_tts1=$("#price_tts1"), price_tts1hd=$("#price_tts1hd");
+  const cps=$("#cps");
+  const ta=$("#text"), sample=$("#sample");
+  const btnPreview=$("#btnPreview"), btnPreviewAll=$("#btnPreviewAll"), btnRun=$("#btnRun"), btnStop=$("#btnStop");
+  const btnRun_m=$("#btnRun_m"), btnPreview_m=$("#btnPreview_m");
+  const player=$("#player"), downloadA=$("#download");
+  const previewList=$("#previewList");
+  const costTable=$("#costTable");
+  const estCost=$("#estCost"), liveChars=$("#liveChars");
+  const overlay=$("#overlay"), ovText=$("#ovText"), ovBar=$("#ovBar"), ovCancel=$("#ovCancel");
+  const toast=$("#toast");
+  const instructions = $("#instructions");
+  const speed = $("#speed"); const speedVal=$("#speedVal");
+  const respFmt = $("#respFmt");
+
+  // Auto-resize textareas
+  Array.from(document.querySelectorAll("textarea")).forEach(el=>{
+    const fit=()=>{ el.style.height="auto"; el.style.height = Math.min(el.scrollHeight, 480) + "px"; };
+    el.addEventListener("input", fit); fit();
+  });
+
+  // Remember key
+  try{ const saved = localStorage.getItem("openai_api_key"); if(saved){ inpKey.value = saved; rememberKey.checked = true; } }catch(_){}
+  rememberKey.onchange = ()=>{ try{ if(rememberKey.checked) localStorage.setItem("openai_api_key", inpKey.value||""); else localStorage.removeItem("openai_api_key"); }catch(e){} };
+  inpKey.oninput = ()=>{ if(rememberKey.checked){ try{ localStorage.setItem("openai_api_key", inpKey.value||""); }catch(e){} } };
+
+  // Live estimate
+  function pricePer1k(model){
+    if(model==="tts-1") return parseFloat(price_tts1.value||"0.015");
+    if(model==="tts-1-hd") return parseFloat(price_tts1hd.value||"0.030");
+    return parseFloat(price_g4om.value||"0.015");
+  }
+  function updateLive(){
+    const chars = ta.value.length;
+    const unit = pricePer1k(selModel.value);
+    const cost = (chars/1000)*unit;
+    liveChars.textContent = chars;
+    estCost.textContent = cost.toFixed(4);
+  }
+  ta.addEventListener("input", updateLive);
+  selModel.addEventListener("change", updateLive);
+  [price_g4om,price_tts1,price_tts1hd].forEach(e=>e.addEventListener("input", updateLive));
+  updateLive();
+
+  // Speed display
+  function clampSpeed(v){ return Math.min(4, Math.max(0.25, v)); }
+  function dispSpeed(){ speedVal.textContent = clampSpeed(parseFloat(speed.value)).toFixed(2) + "×"; }
+  speed.addEventListener("input", dispSpeed); dispSpeed();
+
+  // Toast
+  function showToast(msg){ const t = document.createElement("div"); t.className="t"; t.textContent = msg; toast.appendChild(t); setTimeout(()=>{ t.remove(); }, 2400); }
+
+  // Overlay
+  let stopFlag=false;
+  function setOverlay(show, text, p){
+    overlay.style.display = show? "flex" : "none";
+    if(text!==undefined) ovText.textContent = text;
+    if(p!==undefined)   ovBar.style.width = Math.max(0,Math.min(100,p)) + "%";
+  }
+  ovCancel.onclick = ()=>{ stopFlag = true; setOverlay(false); showToast("Stopped"); };
+
+  // Cost bookkeeping
+  function estimateTokens(text){
+    const chinese = (text.match(/[\u4e00-\u9fff]/g)||[]).length;
+    const non = text.length - chinese;
+    return chinese + Math.ceil(non/4);
+  }
+  function nowStr(){ return new Date().toLocaleString(); }
+  function addCostRow({type, model, voice, chars, tokens, bytes, secs, unitPrice, cost}){
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${nowStr()}</td><td>${type}</td><td>${model}</td><td>${voice||"-"}</td>
+      <td class="right number">${chars}</td><td class="right number">${tokens}</td>
+      <td class="right number">${bytes}</td><td class="right number">${secs.toFixed(1)}</td>
+      <td class="right number">${unitPrice.toFixed(3)}</td><td class="right number">${cost.toFixed(4)}</td>`;
+    costTable.tBodies[0].appendChild(tr);
+    accumulateTotals();
+  }
+  function accumulateTotals(){
+    let sumChars=0,sumTokens=0,sumBytes=0,sumSecs=0,sumCost=0;
+    costTable.tBodies[0].querySelectorAll("tr").forEach(tr=>{
+      const tds = tr.querySelectorAll("td");
+      sumChars += parseInt(tds[4].textContent)||0;
+      sumTokens += parseInt(tds[5].textContent)||0;
+      sumBytes += parseInt(tds[6].textContent)||0;
+      sumSecs += parseFloat(tds[7].textContent)||0;
+      sumCost += parseFloat(tds[9].textContent)||0;
+    });
+    $("#sumChars").textContent = sumChars;
+    $("#sumTokens").textContent = sumTokens;
+    $("#sumBytes").textContent = sumBytes;
+    $("#sumSecs").textContent = sumSecs.toFixed(1);
+    $("#sumCost").textContent = sumCost.toFixed(4);
+  }
+  $("#btnExportCSV").onclick = ()=>{
+    const rows = [];
+    document.querySelectorAll("#costTable tr").forEach(tr=>{
+      rows.push(Array.from(tr.children).map(td=>('"'+td.textContent.replace(/"/g,'""')+'"')).join(","));
+    });
+    const url = URL.createObjectURL(new Blob([rows.join("\n")],{type:"text/csv"}));
+    const a = document.createElement("a"); a.href = url; a.download = "tts-cost-breakdown.csv"; a.click();
+  };
+  $("#btnClearLog").onclick = ()=>{ costTable.tBodies[0].innerHTML = ""; accumulateTotals(); };
+
+  // Split text
+  function splitTextToChunks(text, maxLen){
+    const clean = text.replace(/\r/g,"").trim();
+    if(!clean) return [];
+    const hard = maxLen || 3500;
+    const pieces = [];
+    let buf = "";
+    const toks = clean.split(/(\n{2,}|\n|。|！|!|？|\?|；|;)/);
+    for(const part of toks){
+      if(!part) continue;
+      if((buf+part).length > hard){
+        if(buf){ pieces.push(buf.trim()); buf=""; }
+        if(part.length > hard){
+          for(let i=0;i<part.length;i+=hard) pieces.push(part.slice(i,i+hard));
+        }else buf = part;
+      }else buf += part;
+    }
+    if(buf.trim()) pieces.push(buf.trim());
+    return pieces.filter(Boolean);
+  }
+
+  // Build body
+  function buildBody({model, voice, input, fmt}){
+    const body = { model, voice: voice.toLowerCase(), input, format: fmt };
+    const ins = (instructions.value||"").trim();
+    if(ins) body.instructions = ins; // may be supported based on account
+    const sp = clampSpeed(parseFloat(speed.value)||1);
+    if(sp !== 1) body.speed = sp; // may be supported based on account
+    return body;
+  }
+
+  // TTS call
+  async function ttsOnce({apiKey, model, voice, input, fmt}){
+    const res = await fetch(apiEndpoint, {
+      method:"POST",
+      headers: { "Authorization":"Bearer "+apiKey, "Content-Type":"application/json" },
+      body: JSON.stringify(buildBody({ model, voice, input, fmt }))
+    });
+    if(!res.ok){
+      const txt = await res.text().catch(()=>"" );
+      throw new Error("TTS failed: "+res.status+" "+res.statusText+(txt?(" | "+txt):""));
+    }
+    const buf = await res.arrayBuffer();
+    return new Uint8Array(buf);
+  }
+  function concatUint8(chunks){
+    let total = 0; for(const c of chunks) total += c.length;
+    const out = new Uint8Array(total); let off = 0;
+    for(const c of chunks){ out.set(c,off); off += c.length; }
+    return out;
+  }
+
+  // Preview helpers
+  const VOICES = ["Alloy","Ash","Ballad","Cedar","Coral","Echo","Fable","Marin","Nova","Onyx","Sage","Shimmer","Verse"];
+  function renderPreviewCard(voice, text, url, err){
+    const card = document.createElement("div"); card.className = "preview-card";
+    const hdr = document.createElement("header");
+    const name = document.createElement("div"); name.innerHTML = `<span class="tag">${voice}</span>`;
+    const btn = document.createElement("button"); btn.className="ghost"; btn.textContent="Use this"; btn.onclick = ()=>{ selVoice.value = voice; showToast("Voice set: "+voice); };
+    hdr.appendChild(name); hdr.appendChild(btn);
+    const sampleDiv = document.createElement("div"); sampleDiv.className="sample"; sampleDiv.textContent = text;
+    card.appendChild(hdr); card.appendChild(sampleDiv);
+    if(url){ const au = document.createElement("audio"); au.controls = true; au.src = url; card.appendChild(au); }
+    else if(err){ const warn = document.createElement("div"); warn.className="sample"; warn.textContent = "Failed: "+err; card.appendChild(warn); }
+    previewList.appendChild(card);
+  }
+
+  // Preview current
+  async function previewCurrent(){
+    const apiKey = inpKey.value.trim();
+    if(!apiKey) return showToast("Enter API Key");
+    const model = selModel.value; const voice = selVoice.value;
+    const text = (sample.value || "你好，我是示例语音。").slice(0, 300);
+    setOverlay(true, `Preview ${voice}…`, 10);
+    try{
+      const bytes = await ttsOnce({ apiKey, model, voice, input: text, fmt: respFmt.value });
+      const url = URL.createObjectURL(new Blob([bytes],{type: respMime(respFmt.value)}));
+      player.src = url;
+      addCostRow({ type:"preview", model, voice, chars:text.length, tokens:estimateTokens(text), bytes:bytes.length,
+        secs: text.length/(parseFloat(cps.value)||12), unitPrice: pricePer1k(model), cost: (text.length/1000)*pricePer1k(model) });
+      showToast("Preview OK");
+    }catch(e){ console.error(e); showToast(e.message); }
+    setOverlay(false);
+  }
+  btnPreview.onclick = previewCurrent; btnPreview_m.onclick = previewCurrent;
+
+  // Preview all
+  btnPreviewAll.onclick = async ()=>{
+    const apiKey = inpKey.value.trim();
+    if(!apiKey) return showToast("Enter API Key");
+    previewList.innerHTML = "";
+    const model = selModel.value;
+    const text = (sample.value || "你好，我是示例语音。This is a short voice preview.").slice(0, 220);
+    stopFlag=false; setOverlay(true, "Previewing…", 8);
+    for(let i=0;i<VOICES.length;i++){
+      if(stopFlag) break;
+      const v = VOICES[i];
+      try{
+        const bytes = await ttsOnce({ apiKey, model, voice:v, input: text, fmt: respFmt.value });
+        const url = URL.createObjectURL(new Blob([bytes],{type: respMime(respFmt.value)}));
+        renderPreviewCard(v, text, url);
+        addCostRow({ type:"preview-all", model, voice:v, chars:text.length, tokens:estimateTokens(text), bytes:bytes.length,
+          secs: text.length/(parseFloat(cps.value)||12), unitPrice: pricePer1k(model), cost: (text.length/1000)*pricePer1k(model) });
+      }catch(e){
+        renderPreviewCard(v, text, null, e.message);
+        addCostRow({ type:"preview-failed", model, voice:v, chars:text.length, tokens:estimateTokens(text), bytes:0, secs:0, unitPrice: pricePer1k(model), cost: 0 });
+      }
+      setOverlay(true, `Preview ${i+1}/${VOICES.length}`, Math.round(((i+1)/VOICES.length)*70)+10);
+    }
+    setOverlay(false);
+    showToast("All previews done");
+  };
+
+  // Synthesis
+  async function runSynthesis(){
+    const apiKey = inpKey.value.trim();
+    if(!apiKey) return showToast("Enter API Key");
+    const model = selModel.value, voice = selVoice.value;
+    const text = ta.value;
+    if(!text.trim()) return showToast("Paste text to convert");
+    const chunks = splitTextToChunks(text, 3500);
+    if(!chunks.length) return showToast("Empty text");
+
+    const unit = pricePer1k(model);
+    const cpsVal = parseFloat(cps.value)||12;
+    const parts=[]; let totalChars=0,totalTokens=0,totalBytes=0,totalSecs=0,totalCost=0;
+    stopFlag=false; setOverlay(true, "Converting…", 5); ovCancel.onclick = ()=>{ stopFlag=true; setOverlay(false); };
+
+    for(let i=0;i<chunks.length;i++){
+      if(stopFlag) return;
+      const c = chunks[i];
+      setOverlay(true, `Chunk ${i+1}/${chunks.length}…`, Math.round((i/chunks.length)*90)+5);
+      try{
+        const bytes = await ttsOnce({ apiKey, model, voice, input: c, fmt: respFmt.value });
+        parts.push(bytes);
+        const chars = c.length, tokens = estimateTokens(c), secs = chars/cpsVal, cost = (chars/1000)*unit;
+        addCostRow({ type:"chunk", model, voice, chars, tokens, bytes: bytes.length, secs, unitPrice: unit, cost });
+        totalChars+=chars; totalTokens+=tokens; totalBytes+=bytes.length; totalSecs+=secs; totalCost+=cost;
+      }catch(e){ showToast(e.message); setOverlay(false); return; }
+    }
+    setOverlay(true, "Merging…", 96);
+    const merged = concatUint8(parts);
+    const url = URL.createObjectURL(new Blob([merged],{type: respMime(respFmt.value)}));
+    player.src = url; const ts = new Date().toISOString().replace(/[:.]/g,"-");
+    downloadA.href = url; downloadA.download = `openai-tts-${ts}.${respFmt.value}`;
+    addCostRow({ type:"total", model, voice, chars:totalChars, tokens:totalTokens, bytes:totalBytes, secs:totalSecs, unitPrice:unit, cost:totalCost });
+    setOverlay(false); showToast("Done ✅");
+  }
+  btnRun.onclick = runSynthesis; btnRun_m.onclick = runSynthesis;
+  btnStop.onclick = ()=>{ stopFlag=true; setOverlay(false); showToast("Stopped"); };
+
+  function respMime(fmt){
+    return fmt==="wav" ? "audio/wav" :
+           fmt==="aac" ? "audio/aac" :
+           fmt==="flac"? "audio/flac" :
+           fmt==="opus"? "audio/opus" :
+           fmt==="pcm" ? "audio/L16" :
+           "audio/mpeg";
+  }
+})();
+</script>
+</body>
+</html>
